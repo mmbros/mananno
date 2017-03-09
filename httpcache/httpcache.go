@@ -93,12 +93,12 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 }
 
 func writeBuffer(filename string, data []byte) error {
-	log.Printf("client.WriteBuffer(filename=%q)\n", filename)
+	log.Printf("httpcache.WriteBuffer(filename=%q)\n", filename)
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
 		// in caso di errore prova a creare la cartella e ci riprova
 		if os.IsNotExist(err) {
-			log.Printf("  WB: creating folder: %s\n", filepath.Dir(filename))
+			log.Printf("  creating folder: %s\n", filepath.Dir(filename))
 			err2 := os.MkdirAll(filepath.Dir(filename), 0777)
 			if err2 == nil {
 				err = ioutil.WriteFile(filename, data, 0644)
