@@ -1,0 +1,143 @@
+package scraper
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/base64"
+	"errors"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html"
+)
+
+// ExtractText returns the data of the Text nodes
+// of the selection
+func ExtractText(s *goquery.Selection) string {
+	var buf bytes.Buffer
+
+	n := s.Nodes[0].FirstChild
+	for {
+		if n == nil {
+			break
+		}
+		if n.Type == html.TextNode {
+			s := strings.TrimSpace(n.Data)
+			buf.WriteString(s)
+		}
+		n = n.NextSibling
+
+	}
+	return buf.String()
+}
+
+// NewDocumentFromFile returns a goquery.Document from a file
+func NewDocumentFromFile(path string) (*goquery.Document, error) {
+	// open file
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	// close file on exit
+	defer file.Close()
+	// create a buffered reader
+	reader := bufio.NewReader(file)
+
+	doc, err := goquery.NewDocumentFromReader(reader)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func NewDocumentFromCache(url string, cacheFolder string, msecTtl int64) (*goquery.Document, error) {
+
+	log.Printf("NewDocumentFromCache(url=\"%s\", cacheFolder=\"%s\", msecTtl=%d)\n", url, cacheFolder, msecTtl)
+	// get di base64 hash of the url
+	hash := base64.StdEncoding.EncodeToString([]byte(url))
+	// get the filename
+	filename := cacheFolder + hash + ".html"
+	// check if filename exists
+	fi, err := os.Stat(filename)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		log.Printf("  cached file not exists: %s\n", filename)
+	} else {
+		elapsed := time.Since(fi.ModTime())
+		msec := elapsed.Nanoseconds() / 1000000
+
+		if msec > msecTtl {
+			log.Printf("  cached file expired: %v\n", fi.ModTime())
+			err := os.Remove(filename)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			log.Printf("  using cached file: %s\n", filename)
+			return NewDocumentFromFile(filename)
+		}
+	}
+
+	// create the file
+	log.Printf("  creating cached file: %s\n", filename)
+	out, err := os.Create(filename)
+	if err != nil {
+		err2 := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
+		if err2 == nil {
+			out, err = os.Create(filename)
+			if err == nil {
+				goto FILECREATED
+			}
+		}
+		return nil, err
+	}
+FILECREATED:
+	defer out.Close()
+
+	// get the data from the net
+	log.Printf("  get url: %s\n", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// write the body to the file
+	log.Printf("  saving cached file: %s\n", filename)
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	out.Close()
+	return NewDocumentFromFile(filename)
+}
+
+// GetFirstAcestreamLink returns the first Acestream link of the page
+func GetFirstAcestreamLink(url string) (string, error) {
+	// Load the URL
+	res, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	//TODO: check other http.Status (Cache hit ...)
+	if res.StatusCode != http.StatusOK {
+		return "", errors.New(res.Status)
+	}
+	doc, err := goquery.NewDocumentFromResponse(res)
+	if err != nil {
+		return "", err
+	}
+	link, ok := doc.Find("[href^='acestream://']").Attr("href")
+	if !ok {
+		return "", errors.New("Acestream link not found")
+	}
+	return link, nil
+}
