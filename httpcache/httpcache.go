@@ -11,18 +11,21 @@ import (
 	"net/http/httputil"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 )
 
 // MaxAger function returns the TTL duration for the given url.
 type MaxAger func(url string) time.Duration
 
-type Cache struct {
-	folder string
-	mx     sync.Mutex
-	maxAge MaxAger
-	client *http.Client
+type Client struct {
+	http.Client
+
+	// CacheFolder is the folder where the responses are saved in.
+	// If the folder doesn't exist, it is created only when needed.
+	CacheFolder string
+
+	// MaxAge function returns the TTL duration for each url.
+	MaxAge MaxAger
 }
 
 func defaultMaxAgeFactory(ttl time.Duration) MaxAger {
@@ -31,66 +34,43 @@ func defaultMaxAgeFactory(ttl time.Duration) MaxAger {
 	}
 }
 
-// New creates a new cache client.
-// The responses are saved in the given folder. If the folder doesn't exist,
-// it is created only when a response must be saved.
-// If fnMaxAge is nil, it is used a constant TTL duration of 60 seconds for
-// every response.
-// If client is nil, a default http.Client with 10 seconds timeout is used.
-func New(client *http.Client, folder string, fnMaxAge MaxAger) *Cache {
-	if client == nil {
-		// Don’t use Go’s default HTTP client (in production)
-		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
-		client = &http.Client{
+// NewTTL creates a new httpcache.Client that caches all the responses
+// for the same constant ttl duration.
+func NewTTL(folder string, ttl time.Duration) *Client {
+	client := &Client{
+		Client: http.Client{
+			// Don’t use Go’s default HTTP client (in production)
+			// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
 			Timeout: 10 * time.Second,
-		}
+		},
+		MaxAge:      defaultMaxAgeFactory(ttl),
+		CacheFolder: folder,
 	}
-	if fnMaxAge == nil {
-		fnMaxAge = defaultMaxAgeFactory(60 * time.Second)
-	}
-	cache := &Cache{
-		folder: folder,
-		mx:     sync.Mutex{},
-		maxAge: fnMaxAge,
-		client: client,
-	}
-	return cache
-}
-
-// NewTTL creates a cache client with constant ttl duration.
-// See New for other parameters.
-func NewTTL(client *http.Client, folder string, ttl time.Duration) *Cache {
-	fn := defaultMaxAgeFactory(ttl)
-	return New(client, folder, fn)
-}
-
-// Folder returns the cache folder.
-func (cache *Cache) Folder() string {
-	return cache.folder
+	return client
 }
 
 // Hash returns the hash used for the given url.
-func (cache *Cache) Hash(url string) string {
+func (client *Client) Hash(url string) string {
 	// get the base64 hash of the url
 	return base64.StdEncoding.EncodeToString([]byte(url))
 }
 
 // LocalPath returns the path of the cached file
-func (cache *Cache) LocalPath(url string) string {
-	filename := cache.Hash(url) + ".html"
-	path := filepath.Join(cache.folder, filename)
+func (client *Client) LocalPath(url string) string {
+	filename := client.Hash(url) + ".html"
+	path := filepath.Join(client.CacheFolder, filename)
 	return path
 }
 
-func (cache *Cache) Get(url string) (*http.Response, error) {
+func (client *Client) Get(url string) (*http.Response, error) {
 	// aux function to return error
 	ko := func(err error) (*http.Response, error) {
 		log.Printf("  ERR: %v\n", err)
 		return nil, err
 	}
-	log.Printf("cache.Get(url=\"%s\")\n", url)
+	log.Printf("client.Get(url=\"%s\")\n", url)
 	// get the filename
-	filename := cache.LocalPath(url)
+	filename := client.LocalPath(url)
 	// check if filename exists
 	fileinfo, err := os.Stat(filename)
 	if err != nil {
@@ -101,7 +81,7 @@ func (cache *Cache) Get(url string) (*http.Response, error) {
 		log.Printf("  cached file not exists: %s\n", filename)
 	} else {
 		// file found un cache: check age
-		ttl := cache.maxAge(url)
+		ttl := client.MaxAge(url)
 		elapsed := time.Since(fileinfo.ModTime())
 		log.Printf("  ttl=%q, elapsed=%q\n", ttl, elapsed)
 
@@ -121,7 +101,7 @@ func (cache *Cache) Get(url string) (*http.Response, error) {
 
 	// get the data from the net
 	log.Printf("  get url: %s\n", url)
-	resp, err := cache.client.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return ko(err)
 	}
@@ -153,7 +133,7 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	//return http.ReadResponse(buf, req)
+	// return http.ReadResponse(buf, req)
 	resp, err := http.ReadResponse(buf, req)
 	if err != nil {
 		return nil, err
@@ -170,7 +150,7 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 }
 
 func writeBuffer(filename string, data []byte) error {
-	log.Printf("cache.WriteBuffer(filename=%q)\n", filename)
+	log.Printf("client.WriteBuffer(filename=%q)\n", filename)
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
 		// in caso di errore prova a creare la cartella e ci riprova
@@ -185,12 +165,12 @@ func writeBuffer(filename string, data []byte) error {
 		}
 	}
 	if err != nil {
-		log.Printf("  ERR cache.WriteBuffer: %q\n", err)
+		log.Printf("  ERR client.WriteBuffer: %q\n", err)
 	}
 	return err
 }
 
-func (client *Cache) Do(req *http.Request) (*http.Response, error) {
+func (client *Client) Do(req *http.Request) (*http.Response, error) {
 	// aux function to return error
 	ko := func(err error) (*http.Response, error) {
 		log.Printf("  ERR: %v\n", err)
@@ -199,7 +179,7 @@ func (client *Cache) Do(req *http.Request) (*http.Response, error) {
 
 	// get the url
 	url := req.URL.String()
-	log.Printf("cache.Do(req.url=\"%s\")\n", url)
+	log.Printf("client.Do(req.url=\"%s\")\n", url)
 	// get the filename
 	filename := client.LocalPath(url)
 	// check if filename exists
@@ -214,7 +194,7 @@ func (client *Cache) Do(req *http.Request) (*http.Response, error) {
 		log.Printf("  cached file not exists: %s\n", filename)
 	} else {
 		// file found in cache: check age
-		ttl := client.maxAge(url)
+		ttl := client.MaxAge(url)
 		elapsed := time.Since(fileinfo.ModTime())
 		log.Printf("  ttl=%q, elapsed=%q\n", ttl, elapsed)
 
@@ -234,7 +214,7 @@ func (client *Cache) Do(req *http.Request) (*http.Response, error) {
 
 	// get the data from the net
 	log.Printf("  get url: %s\n", url)
-	resp, err := client.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return ko(err)
 	}
