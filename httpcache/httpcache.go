@@ -17,6 +17,7 @@ import (
 // MaxAger function returns the TTL duration for the given url.
 type MaxAger func(url string) time.Duration
 
+// Client is an HTTP client that cached responses.
 type Client struct {
 	http.Client
 
@@ -41,7 +42,7 @@ func NewTTL(folder string, ttl time.Duration) *Client {
 		Client: http.Client{
 			// Don’t use Go’s default HTTP client (in production)
 			// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
-			Timeout: 10 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 		MaxAge:      defaultMaxAgeFactory(ttl),
 		CacheFolder: folder,
@@ -60,64 +61,6 @@ func (client *Client) LocalPath(url string) string {
 	filename := client.Hash(url) + ".html"
 	path := filepath.Join(client.CacheFolder, filename)
 	return path
-}
-
-func (client *Client) Get(url string) (*http.Response, error) {
-	// aux function to return error
-	ko := func(err error) (*http.Response, error) {
-		log.Printf("  ERR: %v\n", err)
-		return nil, err
-	}
-	log.Printf("client.Get(url=\"%s\")\n", url)
-	// get the filename
-	filename := client.LocalPath(url)
-	// check if filename exists
-	fileinfo, err := os.Stat(filename)
-	if err != nil {
-		// file not found in cache
-		if !os.IsNotExist(err) {
-			return ko(err)
-		}
-		log.Printf("  cached file not exists: %s\n", filename)
-	} else {
-		// file found un cache: check age
-		ttl := client.MaxAge(url)
-		elapsed := time.Since(fileinfo.ModTime())
-		log.Printf("  ttl=%q, elapsed=%q\n", ttl, elapsed)
-
-		if elapsed > ttl {
-			log.Printf("  cached file expired: %v\n", fileinfo.ModTime())
-			err := os.Remove(filename)
-			if err != nil {
-				return ko(err)
-			}
-		} else {
-			log.Printf("  using cached file: %s\n", filename)
-			return readCachedResponse(url, filename)
-		}
-	}
-
-	// cache not found or expired
-
-	// get the data from the net
-	log.Printf("  get url: %s\n", url)
-	resp, err := client.Get(url)
-	if err != nil {
-		return ko(err)
-	}
-
-	// dump the resp to buffer
-	log.Println("  dumping response")
-	buf, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		return ko(err)
-	}
-
-	//log.Printf("  creating cached file: %s\n", filename)
-	writeBuffer(filename, buf)
-
-	return resp, nil
-
 }
 
 func readCachedResponse(url, filename string) (*http.Response, error) {
@@ -170,6 +113,8 @@ func writeBuffer(filename string, data []byte) error {
 	return err
 }
 
+// Do sends an HTTP request and returns an HTTP response, following policy
+// (such as redirects, cookies, auth) as configured on the client.
 func (client *Client) Do(req *http.Request) (*http.Response, error) {
 	// aux function to return error
 	ko := func(err error) (*http.Response, error) {
@@ -179,7 +124,7 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 
 	// get the url
 	url := req.URL.String()
-	log.Printf("client.Do(req.url=\"%s\")\n", url)
+	log.Printf("httpcache.Do(req.url=\"%s\")\n", url)
 	// get the filename
 	filename := client.LocalPath(url)
 	// check if filename exists
@@ -212,9 +157,9 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 
 	// cache not found or expired
 
-	// get the data from the net
+	// get the data from the net using http.Client
 	log.Printf("  get url: %s\n", url)
-	resp, err := client.Do(req)
+	resp, err := client.Client.Do(req)
 	if err != nil {
 		return ko(err)
 	}
@@ -231,4 +176,16 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 
 	return resp, nil
 
+}
+
+// Get issues a GET to the specified URL.
+func (client *Client) Get(url string) (*http.Response, error) {
+	log.Printf("httpcache.Get(url=\"%s\")\n", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.Do(req)
 }
