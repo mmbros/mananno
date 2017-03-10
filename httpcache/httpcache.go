@@ -14,6 +14,13 @@ import (
 	"time"
 )
 
+const (
+	XCacheHeader  = "X-Mmbros-Cache"
+	XCacheMiss    = "MISS"
+	XCacheExpired = "EXPIRED"
+	XCacheHit     = "HIT"
+)
+
 // MaxAger function returns the TTL duration for the given url.
 type MaxAger func(url string) time.Duration
 
@@ -89,6 +96,7 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 	resp.Body.Close()
 	resp.Body = ioutil.NopCloser(b)
 
+	setXCacheHeader(resp, XCacheHit)
 	return resp, nil
 }
 
@@ -113,6 +121,11 @@ func writeBuffer(filename string, data []byte) error {
 	return err
 }
 
+func setXCacheHeader(resp *http.Response, value string) {
+	//log.Printf("setting %s to %q", XCacheHeader, value)
+	resp.Header.Set(XCacheHeader, value)
+}
+
 // Do sends an HTTP request and returns an HTTP response, following policy
 // (such as redirects, cookies, auth) as configured on the client.
 func (client *Client) Do(req *http.Request) (*http.Response, error) {
@@ -121,6 +134,8 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 		log.Printf("  ERR: %v\n", err)
 		return nil, err
 	}
+
+	var xcacheHeaderValue string
 
 	// get the url
 	url := req.URL.String()
@@ -137,6 +152,7 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 		}
 		// error is file not exists
 		log.Printf("  cached file not exists: %s\n", filename)
+		xcacheHeaderValue = XCacheMiss
 	} else {
 		// file found in cache: check age
 		ttl := client.MaxAge(url)
@@ -145,6 +161,7 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 
 		if elapsed > ttl {
 			log.Printf("  cached file expired: %v\n", fileinfo.ModTime())
+			xcacheHeaderValue = XCacheExpired
 			err := os.Remove(filename)
 			if err != nil {
 				return ko(err)
@@ -152,6 +169,7 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 		} else {
 			log.Printf("  using cached file: %s\n", filename)
 			return readCachedResponse(url, filename)
+			//xcacheHeaderValue = XCacheHit
 		}
 	}
 
@@ -173,6 +191,8 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 
 	//log.Printf("  creating cached file: %s\n", filename)
 	writeBuffer(filename, buf)
+
+	setXCacheHeader(resp, xcacheHeaderValue)
 
 	return resp, nil
 

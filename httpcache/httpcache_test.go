@@ -99,6 +99,13 @@ func TestGet(t *testing.T) {
 		logbuf.Reset()
 	}
 
+	checkheader := func(r *http.Response, expected string) {
+		actual := r.Header.Get(XCacheHeader)
+		if actual != expected {
+			t.Errorf("%s: expecting %q, found %q", XCacheHeader, expected, actual)
+		}
+	}
+
 	url := "http://www.google.com"
 	ttl := 100 * time.Millisecond
 	client := NewTTL(cacheFolder, ttl)
@@ -113,6 +120,7 @@ func TestGet(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	checklog("cached file not exists")
+	checkheader(resp, XCacheMiss)
 
 	// GET 2: get from cache
 	resp2, err := client.Get(url)
@@ -121,6 +129,7 @@ func TestGet(t *testing.T) {
 	}
 	defer resp2.Body.Close()
 	checklog("using cached file")
+	checkheader(resp2, XCacheHit)
 
 	// GET 3: cache expired
 	time.Sleep(ttl)
@@ -130,4 +139,5 @@ func TestGet(t *testing.T) {
 	}
 	defer resp3.Body.Close()
 	checklog("cached file expired")
+	checkheader(resp3, XCacheExpired)
 }
