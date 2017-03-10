@@ -19,7 +19,7 @@ func TestStringToLives(t *testing.T) {
 	}
 	for j, r := range res {
 		o := output[j]
-		if (r.channel != o.channel) || (r.lang != o.lang) {
+		if (r.Channel != o.Channel) || (r.Lang != o.Lang) {
 			t.Errorf("item[%d]: expecting %v, got %v", j, o, r)
 		}
 	}

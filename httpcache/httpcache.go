@@ -49,7 +49,7 @@ func NewTTL(folder string, ttl time.Duration) *Client {
 		Client: http.Client{
 			// Don’t use Go’s default HTTP client (in production)
 			// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
-			Timeout: 60 * time.Second,
+			Timeout: 90 * time.Second,
 		},
 		MaxAge:      defaultMaxAgeFactory(ttl),
 		CacheFolder: folder,

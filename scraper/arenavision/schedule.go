@@ -64,9 +64,9 @@ func (sch *Schedule) Get(client scraper.URLGetter) error {
 	// updates schedule object
 	sch.mx.Lock()
 	sch.events = events
-	// if from cache, don't update the lastUpdate timestamp
-	// FIXME: it uses hard coded strings not to import httpcache package:
-	//        find a better solution, please.
+	// If from cache, don't update the lastUpdate timestamp
+	// It uses hard coded strings not to import httpcache package.
+	// XXX: Can't find a better solution.
 	if resp.Header.Get("X-MMbros-Cache") != "HIT" {
 		sch.lastUpdate = time.Now()
 	}
@@ -138,11 +138,11 @@ func (sch *Schedule) EventByChannelAndTime(channel Channel, currTime time.Time) 
 				live = l
 			} else {
 				if currTime.Before(e.StartTime) {
+					// the lives are ordered...
 					return
-				} else {
-					event = e
-					live = l
 				}
+				event = e
+				live = l
 			}
 		}
 	}

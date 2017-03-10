@@ -16,6 +16,9 @@ func (cl *Live) String() string {
 	return fmt.Sprintf("{ch:%s, lang:%s}", cl.Channel, cl.Lang)
 }
 
+// stringToLives transforms a string into a slice of Live.
+// Example of input string:
+//    "11-12 [SPA] <br />       13-14-S3 [SRB] 14 [ITA]"
 func stringToLives(s string) []*Live {
 
 	re := regexp.MustCompile(`([^\]>]+)\s+\[(.*?)\]`)
