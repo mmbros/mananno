@@ -1,5 +1,4 @@
-//go:generate go-bindata -nometadata -pkg templates -prefix templates/tmpl -o templates/bindata.go templates/tmpl/...
-//go:generate gentmpl -c templates/gentmpl.conf -o templates/templates.go
+//go:generate ./build.sh tmpl-dev
 
 // mananno main program
 package main
