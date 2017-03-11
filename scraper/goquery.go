@@ -1,5 +1,12 @@
 package scraper
 
+import (
+	"errors"
+	"net/http"
+
+	"github.com/PuerkitoBio/goquery"
+)
+
 /*
 // NewDocumentFromString returns a goquery.Document from a string.
 func NewDocumentFromString(html string) (*goquery.Document, error) {
@@ -47,20 +54,10 @@ func ExtractText(s *goquery.Selection) string {
 	return buf.String()
 }
 
-// GetFirstAcestreamLink returns the first Acestream link of the page
-func GetFirstAcestreamLink(url string) (string, error) {
-	// Load the URL
-	res, err := client.Get(url)
-	if err != nil {
-		return "", err
-	}
-	//TODO: check other http.Status (Cache hit ...)
-	if res.StatusCode != http.StatusOK {
-		return "", errors.New(res.Status)
-	}
-	// Parse the HTML into nodes
-	defer res.Body.Close()
+*/
 
+// GetFirstAcestreamLink returns the first Acestream link of the page
+func GetFirstAcestreamLink(res *http.Response) (string, error) {
 	doc, err := goquery.NewDocumentFromResponse(res)
 	if err != nil {
 		return "", err
@@ -71,4 +68,3 @@ func GetFirstAcestreamLink(url string) (string, error) {
 	}
 	return link, nil
 }
-*/

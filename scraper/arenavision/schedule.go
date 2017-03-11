@@ -3,7 +3,6 @@ package arenavision
 //package main
 
 import (
-	"net/http"
 	"regexp"
 	"strings"
 	"sync"
@@ -31,23 +30,8 @@ func (sch *Schedule) SourceURL() string {
 // Get creates or updates the scheduled events from the
 // "arenavision.in/schedule" page.
 func (sch *Schedule) Get(client scraper.URLGetter) error {
-	// create a new http.Request
-	req, err := http.NewRequest("GET", sch.SourceURL(), nil)
-	if err != nil {
-		return err
-	}
-
-	// set beget cookie (in order to work properly)
-	cookie := http.Cookie{
-		Name:    "beget",
-		Value:   "begetok",
-		Path:    "/",
-		Expires: time.Now().Add(19360000000),
-	}
-	req.AddCookie(&cookie)
-
-	// get the response
-	resp, err := client.Do(req)
+	// get the schedule page
+	resp, err := getURL(client, sch.SourceURL())
 	if err != nil {
 		return err
 	}
@@ -67,7 +51,7 @@ func (sch *Schedule) Get(client scraper.URLGetter) error {
 	// If from cache, don't update the lastUpdate timestamp
 	// It uses hard coded strings not to import httpcache package.
 	// XXX: Can't find a better solution.
-	if resp.Header.Get("X-MMbros-Cache") != "HIT" {
+	if sch.lastUpdate.IsZero() || resp.Header.Get("X-MMbros-Cache") != "HIT" {
 		sch.lastUpdate = time.Now()
 	}
 	sch.mx.Unlock()

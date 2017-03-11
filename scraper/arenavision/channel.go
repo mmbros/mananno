@@ -1,6 +1,10 @@
 package arenavision
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/mmbros/mananno/scraper"
+)
 
 // Channel represents an Arenavision channel.
 // The values are from "1" to "30" for acestream channels.
@@ -20,4 +24,14 @@ func (ch Channel) SourceURL() string {
 // FullName is the complete name of the Arenavision channel.
 func (ch Channel) FullName() string {
 	return "ArenaVision " + string(ch)
+}
+
+// GetLink get the channel source page and returns the first stream link found.
+// Limits: currently it handles only acestream links.
+func (ch Channel) GetLink(client scraper.URLGetter) (string, error) {
+	resp, err := getURL(client, ch.SourceURL())
+	if err != nil {
+		return "", err
+	}
+	return scraper.GetFirstAcestreamLink(resp)
 }
