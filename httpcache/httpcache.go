@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// Response Header name and values
 const (
 	XCacheHeader  = "X-Mmbros-Cache"
 	XCacheMiss    = "MISS"
@@ -34,6 +35,10 @@ type Client struct {
 
 	// MaxAge function returns the TTL duration for each url.
 	MaxAge MaxAger
+
+	// AddResponseHeader enabled the custom X-Mmbros-Cache header in the
+	// response with values MISS, HIT, EXPIRED
+	AddResponseHeader bool
 }
 
 func defaultMaxAgeFactory(ttl time.Duration) MaxAger {
@@ -51,8 +56,9 @@ func NewTTL(folder string, ttl time.Duration) *Client {
 			// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
 			Timeout: 90 * time.Second,
 		},
-		MaxAge:      defaultMaxAgeFactory(ttl),
-		CacheFolder: folder,
+		MaxAge:            defaultMaxAgeFactory(ttl),
+		CacheFolder:       folder,
+		AddResponseHeader: true,
 	}
 	return client
 }
@@ -70,6 +76,11 @@ func (client *Client) LocalPath(url string) string {
 	return path
 }
 
+// Clear remove the url from cache, if present.
+func (client *Client) Clear(url string) {
+	os.Remove(client.LocalPath(url))
+}
+
 func readCachedResponse(url, filename string) (*http.Response, error) {
 	// Read Dumped Response
 	f, err := os.Open(filename)
@@ -79,7 +90,7 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 	defer f.Close()
 
 	buf := bufio.NewReader(f)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +107,6 @@ func readCachedResponse(url, filename string) (*http.Response, error) {
 	resp.Body.Close()
 	resp.Body = ioutil.NopCloser(b)
 
-	setXCacheHeader(resp, XCacheHit)
 	return resp, nil
 }
 
@@ -121,9 +131,11 @@ func writeBuffer(filename string, data []byte) error {
 	return err
 }
 
-func setXCacheHeader(resp *http.Response, value string) {
-	//log.Printf("setting %s to %q", XCacheHeader, value)
-	resp.Header.Set(XCacheHeader, value)
+func (client *Client) setXCacheHeader(resp *http.Response, value string) {
+	if client.AddResponseHeader {
+		//log.Printf("setting %s to %q", XCacheHeader, value)
+		resp.Header.Set(XCacheHeader, value)
+	}
 }
 
 // Do sends an HTTP request and returns an HTTP response, following policy
@@ -168,8 +180,14 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 			}
 		} else {
 			log.Printf("  using cached file: %s\n", filename)
-			return readCachedResponse(url, filename)
-			//xcacheHeaderValue = XCacheHit
+			xcacheHeaderValue = XCacheHit
+			resp, err := readCachedResponse(url, filename)
+			if err != nil {
+				return ko(err)
+			}
+			// set response header
+			client.setXCacheHeader(resp, xcacheHeaderValue)
+			return resp, nil
 		}
 	}
 
@@ -192,7 +210,8 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 	//log.Printf("  creating cached file: %s\n", filename)
 	writeBuffer(filename, buf)
 
-	setXCacheHeader(resp, xcacheHeaderValue)
+	// set response header
+	client.setXCacheHeader(resp, xcacheHeaderValue)
 
 	return resp, nil
 
@@ -202,7 +221,7 @@ func (client *Client) Do(req *http.Request) (*http.Response, error) {
 func (client *Client) Get(url string) (*http.Response, error) {
 	log.Printf("httpcache.Get(url=\"%s\")\n", url)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
