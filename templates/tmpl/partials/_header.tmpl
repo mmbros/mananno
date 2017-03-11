@@ -1,0 +1,84 @@
+{{define "header"}}<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>{{if .HeadTitle}}{{ .HeadTitle }} | Mananno{{else}}Mananno{{end}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+	font: 20px Helvetica, sans-serif;
+	color: #333;
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 10px;
+}
+h1 {
+	font-size: 50px;
+}
+a {
+	color: blue;
+	text-decoration: none;
+}
+a:hover {
+	background-color: red;
+	color: white;
+	text-decoration: none;
+}
+.schedule {
+	border-collapse: collapse;
+	width: 100%;
+}
+.schedule th, .schedule td {
+	border: 1px solid #ddd;
+	padding: 5px 10px;
+}
+.schedule tbody tr:hover {
+	background-color: rgba(0,0,0,0.07);
+}
+
+.start {
+	font-size: 75%;
+}
+
+.live {
+	background: linear-gradient(135deg, rgba(0,0,0,0.17) 0%,rgba(0,0,0,0.07) 100%);
+	border-radius: 4px;
+/*	color: black; */
+	display: inline-block;
+	padding: 0 5px;
+	text-align: center;
+}
+.live-channel {
+	font-size: inherit;
+	font-weight: bold;
+}
+.live-lang {
+/*	color: gray; */
+	font-size: 50%;
+}
+.live:hover .live-lang {
+/*	color: white; */
+}
+
+.stream-play {
+	font-size: 500%;
+	font-weight: bold;
+}
+.stream-link {
+	font-size: 50%;
+}
+.event-name {
+	font-size: 200%;
+	font-weight: bold;
+}
+.event-competition {
+	font-size: 150%;
+}
+.event-sport {
+	font-size: 100%;
+}
+</style>
+</head>
+<body>
+{{end}}

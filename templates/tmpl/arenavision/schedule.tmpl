@@ -1,0 +1,79 @@
+{{define "schedule"}}{{template "header" .}}
+<h1>ArenaVision Schedule</h1>
+<a href="schedule">Tutti gli eventi</a>
+| <a href="schedule?sport=soccer">Calcio</a>
+| <a href="schedule?competition=italia+serie+a">Serie A</a>
+
+<hr>
+<p>Last Update: <b>{{ .LastUpdate.Format "02 January 15:04:05" }}</b></p>
+<table class="schedule">
+<thead>
+<tr>
+<th>Data</th>
+<th>Sport</th>
+<th>Competizione</th>
+<th>Evento</th>
+<th>Canali</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Events -}}
+		{{- template "schedule-event" . -}}
+{{ end }}
+</tbody>
+</table>
+{{template "footer"}}
+{{end}}
+
+
+{{define "schedule-event"}}<tr>
+<td class="start">
+	<div class="start-date">{{ weekday .StartTime }} {{ .StartTime.Format "02" }}</div>
+	<div class="start-time">{{ .StartTime.Format "15:04" }}</div>
+</td>
+<td><a href="?sport={{urlquery .Sport | ToLower}}">{{ .Sport }}<a/></td>
+<td><a href="?competition={{urlquery .Competition | ToLower}}">{{ .Competition }}<a/></td>
+<td>{{ .Event }}</td>
+<td>
+	{{ range .Lives -}}
+		<a class="live" href="{{ .Channel.URL }}">
+			<div class="live-channel">{{ .Channel  }}</div>
+			<div class="live-lang">{{ .Lang  }}</div>
+		</a>
+	{{ end -}}
+</td>
+</tr>
+{{end}}
+
+{{/*
+input:
+	Channel arenavision.Channel
+	Stream  template.URL
+	Event   *arenavision.Event
+	Live    *arenavision.Live
+	Err     error
+*/}}
+{{define "channel"}}
+	{{ template "header" . }}
+	<center>
+	<h2>{{ .Channel.FullName }}<small><a href="{{ .Channel.SourceURL }}">&#x279F;</a></small></h2>
+{{ if .Err }}
+	<div class="err">{{.Err}}</div>
+{{ end }}
+
+<div class="event-schedule"><a href="schedule">Schedule</a></div>
+{{ if .Event -}}
+	<section class="event">
+		<div class="event-name">{{ .Event.Event }}</div>
+		<div class="event-competition">{{ .Event.Competition }}</div>
+		<div class="event-sport">{{ .Event.Sport }}</div>
+		<div class="event-date">{{ .Event.StartTime.Format "02 Jan 15:04" }}</div>
+		<div class="event-lang">{{ .Live.Lang }}</div>
+	</section>
+{{ end }}
+	<div class="stream-play"><a href="{{ .Stream }}">PLAY</a></div>
+	<div class="stream-link">{{ .Stream }}</div>
+	</center>
+	{{template "footer"}}
+{{end}}
+
