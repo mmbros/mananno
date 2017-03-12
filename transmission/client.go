@@ -8,18 +8,17 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
 
-// TorrentAddResponse represents the information returned
-// by the TorrentAdd method.
-type TorrentAddResponse struct {
-	TorrentAdded struct {
-		ID         int    `json:"id"`
-		HashString string `json:"hashString"`
-		Name       string `json:"name"`
-	} `json:"torrent-added"`
+// Client represents a Transmission client
+type Client struct {
+	Address  string
+	Username string
+	Password string
+	session  session
 }
 
 const headerTransmissionSessionID = "X-Transmission-Session-Id"
@@ -43,20 +42,35 @@ func (s *session) Get() string {
 	return s.id
 }
 
-// Client represents a Transmission client
-type Client struct {
-	Address  string
-	Username string
-	Password string
-	session  session
+func normalizeAddress(addr string) string {
+	if u, err := url.Parse(addr); err == nil {
+		if u.Scheme == "" {
+			u.Scheme = "http"
+		}
+		// redo parse to properly handle addresses with format "ip:port"
+		u, _ := url.Parse(u.String())
+		if u.Path == "" {
+			u.Path = "/transmission/rpc"
+		}
+		log.Printf("transmission: updating Address from %q to %q", addr, u.String())
+		addr = u.String()
+	}
+	return addr
 }
 
 // NewClient initialize a new Transmission client
 func NewClient(addr, usr, pwd string) *Client {
 	return &Client{
-		Address:  addr,
+		Address:  normalizeAddress(addr),
 		Username: usr,
-		Password: pwd}
+		Password: pwd,
+	}
+}
+
+// Ping check the connection
+func (c *Client) Ping() bool {
+	_, err := c.SessionGet()
+	return err == nil
 }
 
 // exec function
@@ -95,9 +109,7 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 		}
 		req.SetBasicAuth(c.Username, c.Password)
 
-		//log.Println("BEFORE client.Do")
 		resp, err := client.Do(req)
-		//log.Println("AFTER client.Do")
 		if err != nil {
 			return err
 		}
@@ -123,12 +135,29 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 				}
 			}
 			return nil
+		//case http.StatusMovedPermanently:
+		//u, _ := url.Parse(c.Address)
+		//u.Path = resp.Header.Get("Location")
+		//log.Printf("Updating client.Address from %q to %q", c.Address, u.String())
+		//c.Address = u.String()
+
 		default:
 			log.Printf("status not expected: %s\n", resp.Status)
+			log.Print(resp.Header)
 		}
 	}
 
 	return errors.New("exec: too many iter")
+}
+
+// TorrentAddResponse represents the information returned
+// by the TorrentAdd method.
+type TorrentAddResponse struct {
+	TorrentAdded struct {
+		ID         int    `json:"id"`
+		HashString string `json:"hashString"`
+		Name       string `json:"name"`
+	} `json:"torrent-added"`
 }
 
 // TorrentAdd method
@@ -171,6 +200,50 @@ func (c *Client) TorrentRemove(ids string, deleteLocalData bool) error {
 	//}
 	//return nil
 	return c.exec(method, &args, nil)
+}
+
+// SessionGetResponse represents the information returned
+// by the SessionGet method.
+type SessionGetResponse struct {
+	// location of transmission's configuration directory
+	ConfigDir string `json:"config-dir"`
+	// default path to download torrents
+	DownloadDir string `json:"download-dir"`
+	//  max number of torrents to download at once (see download-queue-enabled)
+	DownloadQueueSize int `json:"download-queue-size"`
+	// if true, limit how many torrents can be downloaded at once
+	DownloadQueueEnabled bool `json:"download-queue-enabled"`
+	// true means allow dht in public torrents
+	DhtEnabled bool `json:"dht-enabled"`
+	// "required", "preferred", "tolerated"
+	Encryption string
+	// torrents we're seeding will be stopped if they're idle for this long
+	IdleSeedingLimit int `json:"idle-seeding-limit"`
+	// true if the seeding inactivity limit is honored by default
+	IdleSeedingLimitEnabled bool `json:"idle-seeding-limit-enabled"`
+	// path for incomplete torrents, when enabled
+	InclompleteDir string `json:"incomplete-dir"`
+	// true means keep torrents in incomplete-dir until done
+	InclompleteDirEnabled bool `json:"incomplete-dir-enabled"`
+	// the current RPC API version
+	RPCVersion int `json:"rpc-version"`
+	// the minimum RPC API version supported
+	RPCVersionMinimum int `json:"rpc-version-minimum"`
+	// long version string "$version ($revision)"
+	Version string
+}
+
+// SessionGet method
+func (c *Client) SessionGet() (*SessionGetResponse, error) {
+	const method = "session-get"
+
+	var reply SessionGetResponse
+
+	err := c.exec(method, nil, &reply)
+	if err != nil {
+		return nil, err
+	}
+	return &reply, nil
 }
 
 // ----------------------------------------------------------------------------

@@ -1,0 +1,54 @@
+{{ define "content" }}
+{{ template "search-form" . }}
+{{ template "results-table" . }}
+{{ end }}
+
+{{ define "search-form" }}
+<div class="search">
+  <form action="/" method="POST">
+      <label for="search">Search:</label>
+      <input type="text" id="search" name="search" class="search__string" value="{{.Search}}"/>
+
+      <select name="category">
+        <option value="0">All</option>
+        <option value="15"{{if eq .Category 15}} selected="selected"{{end}}>Serie TV</option>
+        <option value="1"{{if eq .Category 1}} selected="selected"{{end}}>Film</option>
+        <option value="6"{{if eq .Category 6}} selected="selected"{{end}}>Libri</option>
+      </select>
+
+      <input type="submit" value="Search">
+  </form>
+{{if .Err}}<p>ERROR: {{.Err}}</p>{{end}}
+</div>
+{{ end }}
+
+{{ define "results-table" }}{{if .Items}}
+<table class="results">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Cat</th>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Date</th>
+            <th>Seeds</th>
+            <th>Leech</th>
+            <th>Magnet</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range $index, $row := .Items}}
+        <tr>
+            <td class="results__index">{{sum $index 1}}</td>
+            <td class="results__cat">{{$row.Cat}}</td>
+            <td class="results__name"><a href="{{$row.HREF}}" target="_blank">{{$row.Name}}</a></td>
+            <td class="results__size">{{$row.Size}}</td>
+            <td class="results__date">{{$row.Date}}</td>
+            <td class="results__seeds">{{$row.Seeds}}</td>
+            <td class="results__leech">{{$row.Leech}}</td>
+            <td class="results__download"><a href="#" onclick='torrentAdd("magnet:?xt=urn:btih:{{$row.Download}}")' title="{{$row.Download}}">[Add]</a></td>
+        </tr>{{end}}
+    </tbody>
+</table>
+{{end}}
+{{ end }}

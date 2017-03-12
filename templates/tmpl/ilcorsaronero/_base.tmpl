@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mananno.org</title>
+<link type="text/css" rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+{{ template "header" . }}
+<main class="l-content">
+{{ template "content" . }}
+</main>
+{{ template "footer" . }}{{ template "browser-sync" . }}
+<!-- script src='js/notie.js'></script -->
+<script src='js/script.js'></script>
+</body>
+</html>
+
+{{define "header"}}
+<header class="l-header"></header>
+{{end}}
+
+{{define "footer"}}
+<footer class="l-footer"><b>mm</b>bros &copy; 2016</footer>
+{{end}}
+
+{{define "content"}}{{end}}
+
+{{define "browser-sync"}}{{end}}
