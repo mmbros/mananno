@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -135,15 +136,11 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 				}
 			}
 			return nil
-		//case http.StatusMovedPermanently:
-		//u, _ := url.Parse(c.Address)
-		//u.Path = resp.Header.Get("Location")
-		//log.Printf("Updating client.Address from %q to %q", c.Address, u.String())
-		//c.Address = u.String()
 
 		default:
 			log.Printf("status not expected: %s\n", resp.Status)
 			log.Print(resp.Header)
+			return fmt.Errorf("Transmission: %s", resp.Status)
 		}
 	}
 
