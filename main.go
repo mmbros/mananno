@@ -171,11 +171,17 @@ func jsonrpcTorrentAdd(req *jsonrpc.Request) (interface{}, error) {
 //}
 
 func main() {
+	cfg, err := loadConfigFromFile("config.toml")
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Print(cfg)
 	httpcacheClient = httpcache.NewTTL("/tmp/mananno", 95*time.Minute)
 	sch = new(arenavision.Schedule)
-	trans = transmission.NewClient("192.168.1.2:9091", "", "")
-
-	addr := ":8080"
+	trans = transmission.NewClient(
+		cfg.Transmission.Address(),
+		cfg.Transmission.Username,
+		cfg.Transmission.Password)
 
 	router := httprouter.New()
 
@@ -198,12 +204,12 @@ func main() {
 	router.POST("/jsonrpc", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) { rpcserver.Handler(w, r) })
 
 	// static files
-	router.ServeFiles("/js/*filepath", http.Dir("./static/js"))
-	router.ServeFiles("/css/*filepath", http.Dir("./static/css"))
+	router.ServeFiles("/js/*filepath", http.Dir(cfg.Assets.JS))
+	router.ServeFiles("/css/*filepath", http.Dir(cfg.Assets.CSS))
 
 	// start web server
-	log.Printf("Starting Mananno web server: listening to %s", addr)
-	if err := http.ListenAndServe(addr, router); err != nil {
+	log.Printf("Starting Mananno web server: listening to %s", cfg.Server.Address())
+	if err := http.ListenAndServe(cfg.Server.Address(), router); err != nil {
 		log.Panic(err)
 	}
 }
