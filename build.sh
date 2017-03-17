@@ -7,7 +7,7 @@
 #GOOS=linux GOARCH=arm go build -v -o mananno2 main.go
 
 PKG="templates"
-PUBLIC="public"
+ASSET="asset"
 TMPL="tmpl"
 EXE="mananno2"
 
@@ -31,14 +31,14 @@ function build_for_rpi {
 
 function gen_tmpl_dev {
 	echo -n "Generating templates for development... "
-	go-bindata -debug -pkg $PKG -prefix $PUBLIC -o $PKG/bindata.go $PUBLIC/...
+	go-bindata -debug -pkg $PKG -prefix $ASSET -o $PKG/bindata.go $ASSET/...
 	gentmpl -d -c $PKG/gentmpl.conf -p $TMPL -o $PKG/templates.go
 	echo done
 }
 
 function gen_tmpl_prod {
 	echo -n "Generating templates for production... "
-	go-bindata -nometadata -pkg $PKG -prefix $PUBLIC -o $PKG/bindata.go $PUBLIC/...
+	go-bindata -nometadata -pkg $PKG -prefix $ASSET -o $PKG/bindata.go $ASSET/...
 	gentmpl -c $PKG/gentmpl.conf -p $TMPL -o $PKG/templates.go
 	echo done
 }
