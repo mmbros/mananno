@@ -22,9 +22,9 @@ type configuration struct {
 	Server       serverConfig
 	Transmission transmissionConfig
 	Assets       struct {
-		JS        string
-		CSS       string
-		Templates string
+		JS  string
+		CSS string
+		//Templates string
 	}
 }
 

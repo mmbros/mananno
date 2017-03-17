@@ -186,6 +186,7 @@ func main() {
 	router := httprouter.New()
 
 	// routes
+	router.GET("/arenavision", handlerRedirect("/arenavision/schedule"))
 	router.GET("/arenavision/schedule", handlerArenavisionSchedule)
 	router.GET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
 	router.GET("/arenavision/av:name", handlerArenavisionChannel)
