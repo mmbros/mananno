@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"log"
@@ -11,7 +12,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/julienschmidt/httprouter"
+	"github.com/justinas/alice"
 	"github.com/mmbros/mananno/httpcache"
 	"github.com/mmbros/mananno/jsonrpc"
 	"github.com/mmbros/mananno/scraper/arenavision"
@@ -26,7 +29,7 @@ var (
 	trans           *transmission.Client
 )
 
-func handlerCorsaroIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handlerCorsaroIndex(w http.ResponseWriter, r *http.Request) {
 	var (
 		data struct {
 			Search   string
@@ -57,21 +60,19 @@ func handlerCorsaroIndex(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 }
 
-func handlerTest(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handlerTest(w http.ResponseWriter, r *http.Request) {
 	if err := templates.PageTestTransmission.Execute(w, nil); err != nil {
 		log.Printf("Template error: %q\n", err)
 	}
 }
 
-func handlerRedirect(location string) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		log.Printf("%s %s", r.Method, r.URL)
-		log.Print(r.URL.Query())
+func handlerRedirect(location string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, location, http.StatusMovedPermanently)
 	}
 }
 
-func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 	var err error
 	log.Printf("%s %s", r.Method, r.URL)
 	log.Print(r.URL.Query())
@@ -100,7 +101,7 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 }
 
-func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.URL)
 	log.Print("*** REFRESH ***")
 	httpcacheClient.Clear(sch.SourceURL())
@@ -110,8 +111,8 @@ func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request, _
 	http.Redirect(w, r, newurl.String(), http.StatusMovedPermanently)
 }
 
-func handlerArenavisionChannel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	log.Printf("%s %s", r.Method, r.URL)
+func handlerArenavisionChannel(w http.ResponseWriter, r *http.Request) {
+	ps := FetchParams(r)
 
 	channel := arenavision.Channel(ps.ByName("name"))
 	link, err := channel.GetLink(httpcacheClient)
@@ -170,6 +171,18 @@ func jsonrpcTorrentAdd(req *jsonrpc.Request) (interface{}, error) {
 //}
 //}
 
+func loggingHandler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		t1 := time.Now()
+		if next != nil {
+			next.ServeHTTP(w, r)
+		}
+		t2 := time.Now()
+		log.Printf("[%s] %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
+	}
+	return http.HandlerFunc(fn)
+}
+
 func main() {
 	cfg, err := loadConfigFromFile("config.toml")
 	if err != nil {
@@ -185,32 +198,91 @@ func main() {
 
 	router := httprouter.New()
 
+	commonHandlers := alice.New(loggingHandler)
+
+	// helper functions
+	routerGET := func(path string, h http.HandlerFunc) {
+		router.GET(path, wrapHandler(commonHandlers.ThenFunc(h)))
+	}
+	routerPOST := func(path string, h http.HandlerFunc) {
+		router.POST(path, wrapHandler(commonHandlers.ThenFunc(h)))
+	}
+	routerServeFiles := func(path string, root http.FileSystem) {
+		if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
+			panic("path must end with /*filepath in path '" + path + "'")
+		}
+
+		fileServer := http.FileServer(root)
+
+		routerGET(path, func(w http.ResponseWriter, req *http.Request) {
+			ps := FetchParams(req)
+			req.URL.Path = ps.ByName("filepath")
+			fileServer.ServeHTTP(w, req)
+		})
+	}
+
 	// routes
-	router.GET("/arenavision", handlerRedirect("/arenavision/schedule"))
-	router.GET("/arenavision/schedule", handlerArenavisionSchedule)
-	router.GET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
-	router.GET("/arenavision/av:name", handlerArenavisionChannel)
+	routerGET("/arenavision", handlerRedirect("/arenavision/schedule"))
+	routerGET("/arenavision/schedule", handlerArenavisionSchedule)
+	routerGET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
+	routerGET("/arenavision/av:name", handlerArenavisionChannel)
 
-	router.GET("/ilcorsaronero", handlerCorsaroIndex)
-	router.POST("/ilcorsaronero", handlerCorsaroIndex)
+	routerGET("/ilcorsaronero", handlerCorsaroIndex)
+	routerPOST("/ilcorsaronero", handlerCorsaroIndex)
 
-	router.GET("/test", handlerTest)
+	routerGET("/test", handlerTest)
 
-	router.GET("/", handlerRedirect("/ilcorsaronero"))
+	routerGET("/", handlerRedirect("/ilcorsaronero"))
 
 	// json-rpc server
 	rpcserver := jsonrpc.NewServer()
 	rpcserver.MethodMap["session-get"] = jsonrpcSessionGet
 	rpcserver.MethodMap["torrent-add"] = jsonrpcTorrentAdd
-	router.POST("/jsonrpc", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) { rpcserver.Handler(w, r) })
+	routerPOST("/jsonrpc", func(w http.ResponseWriter, r *http.Request) { rpcserver.Handler(w, r) })
 
 	// static files
-	router.ServeFiles("/js/*filepath", http.Dir(cfg.Assets.JS))
-	router.ServeFiles("/css/*filepath", http.Dir(cfg.Assets.CSS))
+
+	//router.ServeFiles("/js/*filepath", http.Dir(cfg.Assets.JS))
+	fsJS := &assetfs.AssetFS{
+		Asset:     templates.Asset,
+		AssetDir:  templates.AssetDir,
+		AssetInfo: templates.AssetInfo,
+		Prefix:    cfg.Assets.JS,
+	}
+	routerServeFiles("/js/*filepath", fsJS)
+
+	//router.ServeFiles("/css/*filepath", http.Dir(cfg.Assets.CSS))
+	fsCSS := &assetfs.AssetFS{
+		Asset:     templates.Asset,
+		AssetDir:  templates.AssetDir,
+		AssetInfo: templates.AssetInfo,
+		Prefix:    cfg.Assets.CSS,
+	}
+	routerServeFiles("/css/*filepath", fsCSS)
 
 	// start web server
 	log.Printf("Starting Mananno web server: listening to %s", cfg.Server.Address())
 	if err := http.ListenAndServe(cfg.Server.Address(), router); err != nil {
 		log.Panic(err)
 	}
+}
+
+// ****************************************************************************
+// http://www.apriendeau.com/post/middleware-and-httprouter/
+
+func wrap(p string, h func(http.ResponseWriter, *http.Request)) (string, httprouter.Handle) {
+	return p, wrapHandler(alice.New(loggingHandler).ThenFunc(h))
+}
+
+func wrapHandler(h http.Handler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		ctx := context.WithValue(r.Context(), "params", ps)
+		r = r.WithContext(ctx)
+		h.ServeHTTP(w, r)
+	}
+}
+
+func FetchParams(req *http.Request) httprouter.Params {
+	ctx := req.Context()
+	return ctx.Value("params").(httprouter.Params)
 }
