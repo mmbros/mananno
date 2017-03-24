@@ -21,11 +21,6 @@ type transmissionConfig struct {
 type configuration struct {
 	Server       serverConfig
 	Transmission transmissionConfig
-	Assets       struct {
-		JS  string
-		CSS string
-		//Templates string
-	}
 }
 
 func unmarshalConfig(data []byte) (*configuration, error) {

@@ -240,23 +240,21 @@ func main() {
 	rpcserver.MethodMap["torrent-add"] = jsonrpcTorrentAdd
 	routerPOST("/jsonrpc", func(w http.ResponseWriter, r *http.Request) { rpcserver.Handler(w, r) })
 
-	// static files
-
-	//router.ServeFiles("/js/*filepath", http.Dir(cfg.Assets.JS))
+	// js static files
 	fsJS := &assetfs.AssetFS{
 		Asset:     templates.Asset,
 		AssetDir:  templates.AssetDir,
 		AssetInfo: templates.AssetInfo,
-		Prefix:    cfg.Assets.JS,
+		Prefix:    "js",
 	}
 	routerServeFiles("/js/*filepath", fsJS)
 
-	//router.ServeFiles("/css/*filepath", http.Dir(cfg.Assets.CSS))
+	// css static files
 	fsCSS := &assetfs.AssetFS{
 		Asset:     templates.Asset,
 		AssetDir:  templates.AssetDir,
 		AssetInfo: templates.AssetInfo,
-		Prefix:    cfg.Assets.CSS,
+		Prefix:    "css",
 	}
 	routerServeFiles("/css/*filepath", fsCSS)
 

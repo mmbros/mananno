@@ -38,7 +38,7 @@ function gen_tmpl_dev {
 
 function gen_tmpl_prod {
 	echo -n "Generating templates for production... "
-	go-bindata -nometadata -pkg $PKG -prefix $ASSET -o $PKG/bindata.go $ASSET/...
+	go-bindata -pkg $PKG -prefix $ASSET -o $PKG/bindata.go $ASSET/...
 	gentmpl -c $PKG/gentmpl.conf -p $TMPL -o $PKG/templates.go
 	echo done
 }

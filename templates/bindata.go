@@ -96,7 +96,7 @@ func cssIlcorsaroneroStyleCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "css/ilcorsaronero/style.css", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "css/ilcorsaronero/style.css", size: 3598, mode: os.FileMode(420), modTime: time.Unix(1456680262, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -116,7 +116,7 @@ func imgArenavisionLogo_av2015Png() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "img/arenavision/logo_av2015.png", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "img/arenavision/logo_av2015.png", size: 24769, mode: os.FileMode(436), modTime: time.Unix(1489232212, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -136,7 +136,7 @@ func imgDilbertDilbertLogoPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "img/dilbert/dilbert-logo.png", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "img/dilbert/dilbert-logo.png", size: 5762, mode: os.FileMode(436), modTime: time.Unix(1489263426, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -156,7 +156,7 @@ func imgDilbertDilbert_character_topPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "img/dilbert/dilbert_character_top.png", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "img/dilbert/dilbert_character_top.png", size: 12182, mode: os.FileMode(436), modTime: time.Unix(1489263444, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -176,7 +176,7 @@ func imgIlcorsaroneroH_logoGif() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "img/ilcorsaronero/h_logo.gif", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "img/ilcorsaronero/h_logo.gif", size: 3386, mode: os.FileMode(436), modTime: time.Unix(1489232306, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -196,7 +196,7 @@ func jsIlcorsaroneroTorrentAddJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "js/ilcorsaronero/torrent-add.js", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "js/ilcorsaronero/torrent-add.js", size: 1226, mode: os.FileMode(436), modTime: time.Unix(1489443722, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -216,7 +216,7 @@ func tmplArenavisionScheduleTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/arenavision/schedule.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/arenavision/schedule.tmpl", size: 2088, mode: os.FileMode(436), modTime: time.Unix(1489227318, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -236,7 +236,7 @@ func tmplIlcorsaronero_baseTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/ilcorsaronero/_base.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/ilcorsaronero/_base.tmpl", size: 737, mode: os.FileMode(436), modTime: time.Unix(1489439876, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -256,7 +256,7 @@ func tmplIlcorsaronero_browserSyncTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/ilcorsaronero/_browser-sync.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/ilcorsaronero/_browser-sync.tmpl", size: 260, mode: os.FileMode(436), modTime: time.Unix(1455483226, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -276,7 +276,7 @@ func tmplIlcorsaroneroIndexTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/ilcorsaronero/index.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/ilcorsaronero/index.tmpl", size: 2071, mode: os.FileMode(436), modTime: time.Unix(1489442416, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -296,7 +296,7 @@ func tmplIlcorsaroneroIndexTmplOld() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/ilcorsaronero/index.tmpl.old", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/ilcorsaronero/index.tmpl.old", size: 1844, mode: os.FileMode(436), modTime: time.Unix(1456171685, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -316,7 +316,7 @@ func tmplPartials_footerTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/partials/_footer.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/partials/_footer.tmpl", size: 147, mode: os.FileMode(436), modTime: time.Unix(1489350543, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -336,7 +336,7 @@ func tmplPartials_headerTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/partials/_header.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/partials/_header.tmpl", size: 1327, mode: os.FileMode(436), modTime: time.Unix(1489254292, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -356,7 +356,7 @@ func tmplTestTransmissionTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "tmpl/test/transmission.tmpl", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "tmpl/test/transmission.tmpl", size: 1328, mode: os.FileMode(436), modTime: time.Unix(1489351929, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
