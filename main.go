@@ -200,25 +200,18 @@ func main() {
 
 	commonHandlers := alice.New(loggingHandler)
 
+	fileServer := http.FileServer(&assetfs.AssetFS{
+		Asset:     templates.Asset,
+		AssetDir:  templates.AssetDir,
+		AssetInfo: templates.AssetInfo,
+	})
+
 	// helper functions
 	routerGET := func(path string, h http.HandlerFunc) {
 		router.GET(path, wrapHandler(commonHandlers.ThenFunc(h)))
 	}
 	routerPOST := func(path string, h http.HandlerFunc) {
 		router.POST(path, wrapHandler(commonHandlers.ThenFunc(h)))
-	}
-	routerServeFiles := func(path string, root http.FileSystem) {
-		if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
-			panic("path must end with /*filepath in path '" + path + "'")
-		}
-
-		fileServer := http.FileServer(root)
-
-		routerGET(path, func(w http.ResponseWriter, req *http.Request) {
-			ps := FetchParams(req)
-			req.URL.Path = ps.ByName("filepath")
-			fileServer.ServeHTTP(w, req)
-		})
 	}
 
 	// routes
@@ -238,25 +231,12 @@ func main() {
 	rpcserver := jsonrpc.NewServer()
 	rpcserver.MethodMap["session-get"] = jsonrpcSessionGet
 	rpcserver.MethodMap["torrent-add"] = jsonrpcTorrentAdd
-	routerPOST("/jsonrpc", func(w http.ResponseWriter, r *http.Request) { rpcserver.Handler(w, r) })
+	//routerPOST("/jsonrpc", func(w http.ResponseWriter, r *http.Request) { rpcserver.Handler(w, r) })
+	routerPOST("/jsonrpc", rpcserver.Handler)
 
-	// js static files
-	fsJS := &assetfs.AssetFS{
-		Asset:     templates.Asset,
-		AssetDir:  templates.AssetDir,
-		AssetInfo: templates.AssetInfo,
-		Prefix:    "js",
-	}
-	routerServeFiles("/js/*filepath", fsJS)
-
-	// css static files
-	fsCSS := &assetfs.AssetFS{
-		Asset:     templates.Asset,
-		AssetDir:  templates.AssetDir,
-		AssetInfo: templates.AssetInfo,
-		Prefix:    "css",
-	}
-	routerServeFiles("/css/*filepath", fsCSS)
+	// static files
+	routerGET("/css/*filepath", fileServer.ServeHTTP)
+	routerGET("/js/*filepath", fileServer.ServeHTTP)
 
 	// start web server
 	log.Printf("Starting Mananno web server: listening to %s", cfg.Server.Address())
@@ -267,6 +247,16 @@ func main() {
 
 // ****************************************************************************
 // http://www.apriendeau.com/post/middleware-and-httprouter/
+// https://blog.golang.org/context#TOC_3.2.
+
+// The contextKey type is unexported to prevent collisions with context keys defined in
+// other packages.
+type contextKey int
+
+// paramsKey is the context key for the httprouter.Params. Its value of zero is
+// arbitrary. If this package defined other context keys, they would have
+// different integer values.
+const paramsKey contextKey = 0
 
 func wrap(p string, h func(http.ResponseWriter, *http.Request)) (string, httprouter.Handle) {
 	return p, wrapHandler(alice.New(loggingHandler).ThenFunc(h))
@@ -274,13 +264,14 @@ func wrap(p string, h func(http.ResponseWriter, *http.Request)) (string, httprou
 
 func wrapHandler(h http.Handler) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		ctx := context.WithValue(r.Context(), "params", ps)
+		ctx := context.WithValue(r.Context(), paramsKey, ps)
 		r = r.WithContext(ctx)
 		h.ServeHTTP(w, r)
 	}
 }
 
+// FetchParams returns the httprouter.Params of the given http.Request.
 func FetchParams(req *http.Request) httprouter.Params {
 	ctx := req.Context()
-	return ctx.Value("params").(httprouter.Params)
+	return ctx.Value(paramsKey).(httprouter.Params)
 }
