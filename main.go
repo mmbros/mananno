@@ -6,9 +6,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"path"
 	"strconv"
 	"time"
 
@@ -24,10 +29,44 @@ import (
 )
 
 var (
+	cfg             *configuration
 	httpcacheClient *httpcache.Client
 	sch             *arenavision.Schedule
 	trans           *transmission.Client
 )
+
+func handlerTransmission(w http.ResponseWriter, r *http.Request) {
+	ps := FetchParams(r)
+	filepath := ps.ByName("filepath")
+	log.Print("filepath: ", filepath)
+	log.Print("Transmission.Web: ", cfg.Transmission.Web())
+	u, _ := url.Parse(cfg.Transmission.Web())
+	u.Path = path.Join(u.Path, filepath)
+	s := u.String()
+	if filepath == "/" {
+		s += "/"
+	}
+	log.Print("URL: ", s)
+
+	resp, err := trans.Get(s)
+	if err != nil {
+		log.Printf("!!! Get error !!!\n")
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	text, err := ioutil.ReadAll(resp.Body)
+	fmt.Fprintf(w, "\n\n%s\n\n", text)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+func handlerTransmissionRevProxy(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.URL)
+		w.Header().Set("X-Go-Proxy", "MMbros")
+		p.ServeHTTP(w, r)
+	}
+}
 
 func handlerCorsaroIndex(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -184,7 +223,8 @@ func loggingHandler(next http.Handler) http.Handler {
 }
 
 func main() {
-	cfg, err := loadConfigFromFile("config.toml")
+	var err error
+	cfg, err = loadConfigFromFile("config.toml")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -238,11 +278,47 @@ func main() {
 	routerGET("/css/*filepath", fileServer.ServeHTTP)
 	routerGET("/js/*filepath", fileServer.ServeHTTP)
 
+	// transmission reverse proxy
+	//log.Print(cfg.Transmission.Web())
+	//remote, err := url.Parse(cfg.Transmission.Web())
+	//if err != nil {
+	//panic(err)
+	//}
+	//proxy := httputil.NewSingleHostReverseProxy(remote)
+	//routerGET("/transmission/*filepath", handlerTransmissionRevProxy(proxy))
+
+	routerGET("/transmission/web/*filepath", handlerTransmission)
+
 	// start web server
 	log.Printf("Starting Mananno web server: listening to %s", cfg.Server.Address())
 	if err := http.ListenAndServe(cfg.Server.Address(), router); err != nil {
 		log.Panic(err)
 	}
+}
+func main3() {
+	cfg, err := loadConfigFromFile("config.toml")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	trans = transmission.NewClient(
+		cfg.Transmission.Address(),
+		cfg.Transmission.Username,
+		cfg.Transmission.Password,
+	)
+
+	resp, err := trans.Get(cfg.Transmission.Web())
+	if err != nil {
+		log.Printf("!!! Get error !!!\n")
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	text, err := ioutil.ReadAll(resp.Body)
+	fmt.Printf("\n\n%s\n\n", text)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 // ****************************************************************************

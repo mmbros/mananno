@@ -50,6 +50,9 @@ func loadConfigFromFile(path string) (*configuration, error) {
 func (t transmissionConfig) Address() string {
 	return fmt.Sprintf("%s:%d", t.Host, t.Port)
 }
+func (t transmissionConfig) Web() string {
+	return fmt.Sprintf("http://%s/transmission/web/", t.Address())
+}
 
 func (s serverConfig) Address() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)

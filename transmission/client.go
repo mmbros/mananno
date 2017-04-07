@@ -16,10 +16,12 @@ import (
 
 // Client represents a Transmission client
 type Client struct {
+	// Address for Json request
 	Address  string
 	Username string
 	Password string
 	session  session
+	client   *http.Client
 }
 
 const headerTransmissionSessionID = "X-Transmission-Session-Id"
@@ -61,10 +63,17 @@ func normalizeAddress(addr string) string {
 
 // NewClient initialize a new Transmission client
 func NewClient(addr, usr, pwd string) *Client {
+	client := &http.Client{
+		// Don’t use Go’s default HTTP client (in production)
+		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
+		Timeout: 60 * time.Second,
+	}
+
 	return &Client{
 		Address:  normalizeAddress(addr),
 		Username: usr,
 		Password: pwd,
+		client:   client,
 	}
 }
 
@@ -88,12 +97,6 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 	// get saved X-Transmission-Session-Id
 	sessionID := c.session.Get()
 
-	client := &http.Client{
-		// Don’t use Go’s default HTTP client (in production)
-		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
-		Timeout: 60 * time.Second,
-	}
-
 	for iter := 0; iter < maxIter; iter++ {
 		log.Printf("iter %d: %s\n", iter, string(buf))
 
@@ -110,7 +113,7 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 		}
 		req.SetBasicAuth(c.Username, c.Password)
 
-		resp, err := client.Do(req)
+		resp, err := c.client.Do(req)
 		if err != nil {
 			return err
 		}
@@ -295,4 +298,54 @@ func decodeClientResponse(r io.Reader, reply interface{}) error {
 	}
 
 	return json.Unmarshal(*c.Args, reply)
+}
+
+// Get function
+func (c *Client) Get(url string) (*http.Response, error) {
+	log.Printf("transmission.Get(%q)", url)
+
+	const maxIter = 3
+
+	// get saved X-Transmission-Session-Id
+	sessionID := c.session.Get()
+
+	for iter := 0; iter < maxIter; iter++ {
+
+		// prepare the request
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if sessionID != "" {
+			req.Header.Set(headerTransmissionSessionID, sessionID)
+		}
+		req.SetBasicAuth(c.Username, c.Password)
+
+		resp, err := c.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		log.Printf("iter %d: %s\n", iter, resp.Status)
+		switch resp.StatusCode {
+		case http.StatusConflict:
+			// handle "409 Conflict"
+
+			// read and save new X-Transmission-Session-Id
+			sessionID = resp.Header[headerTransmissionSessionID][0]
+			c.session.Set(sessionID)
+			// repeat the request
+			continue
+		case http.StatusOK:
+			// handle "200 OK"
+			return resp, nil
+
+		default:
+			log.Printf("status not expected: %s\n", resp.Status)
+			log.Print(resp.Header)
+			return nil, fmt.Errorf("Transmission: %s", resp.Status)
+		}
+	}
+
+	return nil, errors.New("exec: too many iter")
 }
