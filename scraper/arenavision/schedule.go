@@ -1,7 +1,5 @@
 package arenavision
 
-//package main
-
 import (
 	"regexp"
 	"strings"

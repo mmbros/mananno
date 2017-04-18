@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/elazarl/go-bindata-assetfs"
@@ -40,11 +41,13 @@ func handlerTransmission(w http.ResponseWriter, r *http.Request) {
 	filepath := ps.ByName("filepath")
 	log.Print("filepath: ", filepath)
 	log.Print("Transmission.Web: ", cfg.Transmission.Web())
-	u, _ := url.Parse(cfg.Transmission.Web())
+	u, _ := url.Parse(cfg.Transmission.URL())
 	u.Path = path.Join(u.Path, filepath)
 	s := u.String()
-	if filepath == "/" {
-		s += "/"
+	if strings.HasSuffix(filepath, "/") {
+		if !strings.HasSuffix(s, "/") {
+			s += "/"
+		}
 	}
 	log.Print("URL: ", s)
 
@@ -53,6 +56,12 @@ func handlerTransmission(w http.ResponseWriter, r *http.Request) {
 		log.Printf("!!! Get error !!!\n")
 		log.Fatal(err)
 	}
+
+	if strings.HasSuffix(filepath, ".css") {
+		log.Print("CSS:", filepath)
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	}
+
 	defer resp.Body.Close()
 	text, err := ioutil.ReadAll(resp.Body)
 	fmt.Fprintf(w, "\n\n%s\n\n", text)
@@ -287,7 +296,7 @@ func main() {
 	//proxy := httputil.NewSingleHostReverseProxy(remote)
 	//routerGET("/transmission/*filepath", handlerTransmissionRevProxy(proxy))
 
-	routerGET("/transmission/web/*filepath", handlerTransmission)
+	routerGET("/transmission/*filepath", handlerTransmission)
 
 	// start web server
 	log.Printf("Starting Mananno web server: listening to %s", cfg.Server.Address())
