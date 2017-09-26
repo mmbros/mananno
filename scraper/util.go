@@ -1,6 +1,10 @@
 package scraper
 
-import "net/http"
+import (
+	"net/http"
+	"net/url"
+	"time"
+)
 
 // URLGetter interface defines the methods needed to get an URL.
 // A standard http.Client satisfy the interface.
@@ -9,68 +13,24 @@ type URLGetter interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-/*
-// NewDocumentFromFile returns a goquery.Document from a file
-func NewDocumentFromFile(path string) (*goquery.Document, error) {
-	// open file
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
+// DefaultURLGetter returns an http.Client as the default URL getter.
+func DefaultURLGetter() URLGetter {
+	client := &http.Client{
+		// Don’t use Go’s default HTTP client (in production)
+		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779#.q5iexu8v7
+		Timeout: 90 * time.Second,
 	}
-	// close file on exit
-	defer file.Close()
-	// create a buffered reader
-	reader := bufio.NewReader(file)
-
-	doc, err := goquery.NewDocumentFromReader(reader)
-	if err != nil {
-		return nil, err
-	}
-	return doc, nil
+	return client
 }
 
-// ExtractText returns the data of the Text nodes
-// of the selection
-func ExtractText(s *goquery.Selection) string {
-	var buf bytes.Buffer
-
-	n := s.Nodes[0].FirstChild
-	for {
-		if n == nil {
-			break
-		}
-		if n.Type == html.TextNode {
-			s := strings.TrimSpace(n.Data)
-			buf.WriteString(s)
-		}
-		n = n.NextSibling
-
-	}
-	return buf.String()
-}
-
-// GetFirstAcestreamLink returns the first Acestream link of the page
-func GetFirstAcestreamLink(url string) (string, error) {
-	// Load the URL
-	res, err := client.Get(url)
+func AbsoluteURL(base, ref string) (string, error) {
+	ubase, err := url.Parse(base)
 	if err != nil {
 		return "", err
 	}
-	//TODO: check other http.Status (Cache hit ...)
-	if res.StatusCode != http.StatusOK {
-		return "", errors.New(res.Status)
-	}
-	// Parse the HTML into nodes
-	defer res.Body.Close()
-
-	doc, err := goquery.NewDocumentFromResponse(res)
+	uref, err := url.Parse(ref)
 	if err != nil {
 		return "", err
 	}
-	link, ok := doc.Find("[href^='acestream://']").Attr("href")
-	if !ok {
-		return "", errors.New("Acestream link not found")
-	}
-	return link, nil
+	return ubase.ResolveReference(uref).String(), nil
 }
-*/

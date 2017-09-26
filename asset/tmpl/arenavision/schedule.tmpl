@@ -36,7 +36,7 @@
 <td>{{ .Event }}</td>
 <td>
 	{{ range .Lives -}}
-		<a class="live" href="{{ .Channel.URL }}">
+		<a class="live" href="channels/{{ .Channel.ID }}">
 			<div class="live-channel">{{ .Channel  }}</div>
 			<div class="live-lang">{{ .Lang  }}</div>
 		</a>
@@ -56,12 +56,12 @@ input:
 {{define "channel"}}
 	{{ template "header" . }}
 	<center>
-	<h2>{{ .Channel.FullName }}<small><a href="{{ .Channel.SourceURL }}">&#x279F;</a></small></h2>
+	<h2>{{ .Channel.Name }}<small><a href="{{ .Channel.SourceURL }}">&#x279F;</a></small></h2>
 {{ if .Err }}
 	<div class="err">{{.Err}}</div>
 {{ end }}
 
-<div class="event-schedule"><a href="schedule">Schedule</a></div>
+<div class="event-schedule"><a href="../schedule">Events Guide</a></div>
 {{ if .Event -}}
 	<section class="event">
 		<div class="event-name">{{ .Event.Event }}</div>

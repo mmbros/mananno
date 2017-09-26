@@ -2,13 +2,14 @@ package arenavision
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 )
 
 // Live represents an Arenavision live, i.e. a channel and a language.
 type Live struct {
-	Channel Channel
+	Channel *Channel
 	Lang    string
 }
 
@@ -19,7 +20,7 @@ func (cl *Live) String() string {
 // stringToLives transforms a string into a slice of Live.
 // Example of input string:
 //    "11-12 [SPA] <br />       13-14-S3 [SRB] 14 [ITA]"
-func stringToLives(s string) []*Live {
+func stringToLives(s string, channels Channels) []*Live {
 
 	re := regexp.MustCompile(`([^\]>]+)\s+\[(.*?)\]`)
 	matches := re.FindAllStringSubmatch(s, -1)
@@ -30,12 +31,17 @@ func stringToLives(s string) []*Live {
 
 	for _, match := range matches {
 		lang := match[2]
-		channels := strings.Split(match[1], "-")
-		for _, ch := range channels {
-			res = append(res, &Live{
-				Channel: Channel(strings.TrimSpace(ch)),
-				Lang:    lang,
-			})
+		chids := strings.Split(match[1], "-")
+		for _, chid := range chids {
+			if ch := channels.Get(chid); ch == nil {
+				log.Printf("Channel not found: channel id = %q", chid)
+			} else {
+				res = append(res, &Live{
+					Channel: ch,
+					Lang:    lang,
+				})
+
+			}
 		}
 	}
 

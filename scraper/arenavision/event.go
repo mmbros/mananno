@@ -37,6 +37,7 @@ func isValueInList(value string, list []string) bool {
 
 }
 
+// Match check if the event matches the filter.
 func (e *Event) Match(filter url.Values) bool {
 	sports := filter["sport"]
 	if sports != nil {
@@ -53,6 +54,7 @@ func (e *Event) Match(filter url.Values) bool {
 	return true
 }
 
+// FilteredBy returns only the events matching the filters criteria.
 func (events Events) FilteredBy(filter url.Values) Events {
 	res := Events{}
 	for _, e := range events {
@@ -63,7 +65,7 @@ func (events Events) FilteredBy(filter url.Values) Events {
 	return res
 }
 
-func (e *Event) liveByChannel(channel Channel) *Live {
+func (e *Event) liveByChannel(channel *Channel) *Live {
 	for _, live := range e.Lives {
 		if live.Channel == channel {
 			return live

@@ -32,7 +32,7 @@ import (
 var (
 	cfg             *configuration
 	httpcacheClient *httpcache.Client
-	sch             *arenavision.Schedule
+	av              *arenavision.Scraper
 	trans           *transmission.Client
 )
 
@@ -125,20 +125,21 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.URL)
 	log.Print(r.URL.Query())
 
-	err = sch.Get(httpcacheClient)
+	err = av.RefreshGuide()
 
-	events, lastUpdate := sch.Events()
+	lastUpdate := time.Now()
+	events := av.Events
 	events = events.FilteredBy(r.URL.Query())
 	// filters:
 	//   - sport : []string
 	//   - competition: []sting
 	data := struct {
 		HeadTitle  string
-		Events     []*arenavision.Event
+		Events     arenavision.Events
 		LastUpdate time.Time
 		Err        error
 	}{
-		"ArenaVision Schedule",
+		"ArenaVision Events Guide",
 		events,
 		lastUpdate,
 		err,
@@ -152,7 +153,7 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.URL)
 	log.Print("*** REFRESH ***")
-	httpcacheClient.Clear(sch.SourceURL(nil))
+	httpcacheClient.Clear(av.GuideURL())
 	// redirect to the schedule page, preserving original url query
 	newurl := *r.URL
 	newurl.Path = "/arenavision/schedule"
@@ -162,19 +163,19 @@ func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request) {
 func handlerArenavisionChannel(w http.ResponseWriter, r *http.Request) {
 	ps := FetchParams(r)
 
-	channel := arenavision.Channel(ps.ByName("name"))
+	channel := av.Channels[ps.ByName("name")]
 	link, err := channel.GetLink(httpcacheClient)
-	event, live := sch.EventByChannel(channel)
+	event, live := av.EventByChannel(channel)
 
 	data := struct {
 		HeadTitle string
-		Channel   arenavision.Channel
+		Channel   *arenavision.Channel
 		Stream    template.URL
 		Event     *arenavision.Event
 		Live      *arenavision.Live
 		Err       error
 	}{
-		channel.FullName(),
+		channel.Name,
 		channel,
 		template.URL(link),
 		event,
@@ -239,7 +240,7 @@ func main() {
 	}
 	log.Print(cfg)
 	httpcacheClient = httpcache.NewTTL("/tmp/mananno", 95*time.Minute)
-	sch = new(arenavision.Schedule)
+	av = &arenavision.Scraper{Client: httpcacheClient}
 	trans = transmission.NewClient(
 		cfg.Transmission.Address(),
 		cfg.Transmission.Username,
@@ -267,7 +268,7 @@ func main() {
 	routerGET("/arenavision", handlerRedirect("/arenavision/schedule"))
 	routerGET("/arenavision/schedule", handlerArenavisionSchedule)
 	routerGET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
-	routerGET("/arenavision/av:name", handlerArenavisionChannel)
+	routerGET("/arenavision/channels/:name", handlerArenavisionChannel)
 
 	routerGET("/ilcorsaronero", handlerCorsaroIndex)
 	routerPOST("/ilcorsaronero", handlerCorsaroIndex)
