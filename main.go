@@ -152,8 +152,8 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 func handlerArenavisionScheduleRefresh(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s", r.Method, r.URL)
 	log.Print("*** REFRESH ***")
-	httpcacheClient.Clear(sch.SourceURL())
-	// redirect to the schedule page, preservng original url query
+	httpcacheClient.Clear(sch.SourceURL(nil))
+	// redirect to the schedule page, preserving original url query
 	newurl := *r.URL
 	newurl.Path = "/arenavision/schedule"
 	http.Redirect(w, r, newurl.String(), http.StatusMovedPermanently)

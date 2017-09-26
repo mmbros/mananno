@@ -1,6 +1,8 @@
 package arenavision
 
 import (
+	"net/url"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -21,15 +23,42 @@ func parseStartTime(theDay, theTime string) (time.Time, error) {
 	return time.Parse(format, theDay+" "+theTime)
 }
 
-func (sch *Schedule) SourceURL() string {
+func (sch *Schedule) defaultSourceURL() string {
 	return "http://arenavision.in/schedule"
+}
+
+func (sch *Schedule) SourceURL(client scraper.URLGetter) string {
+
+	baseURL := "http://arenavision.in/"
+
+	// get the main page
+	resp, err := getURL(client, baseURL)
+	if err != nil {
+		return sch.defaultSourceURL()
+	}
+
+	// create a goquery document from the response
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return sch.defaultSourceURL()
+	}
+
+	relURL, ok := doc.Find("#navigation li.leaf a").Attr("href")
+	if !ok {
+		return sch.defaultSourceURL()
+	}
+
+	u, err := url.Parse(baseURL)
+	u.Path = path.Join(u.Path, relURL)
+
+	return u.String()
 }
 
 // Get creates or updates the scheduled events from the
 // "arenavision.in/schedule" page.
 func (sch *Schedule) Get(client scraper.URLGetter) error {
 	// get the schedule page
-	resp, err := getURL(client, sch.SourceURL())
+	resp, err := getURL(client, sch.SourceURL(client))
 	if err != nil {
 		return err
 	}
