@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/mmbros/www/scraper"
+	"github.com/mmbros/mananno/scraper"
 )
 
 const (

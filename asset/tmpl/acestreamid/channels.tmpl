@@ -1,0 +1,29 @@
+{{define "channels"}}{{template "header" .}}
+<h1>Acestreamid's Channels</h1>
+
+<hr>
+<p>Last Update: <b>{{ .LastUpdate.Format "02 January 15:04:05" }}</b></p>
+<table class="schedule">
+<thead>
+<tr>
+<th>Name</th>
+<th>href</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Channels -}}
+		{{- template "channel" . -}}
+{{ end }}
+</tbody>
+</table>
+{{template "footer"}}
+{{end}}
+
+
+{{define "channel"}}<tr>
+<td>{{ .Name }}</td>
+<td>{{ .Href }}</td>
+<td>{{ .Count }}</td>
+</tr>
+{{end}}

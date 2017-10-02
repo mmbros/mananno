@@ -3,7 +3,7 @@ package arenavision
 import (
 	"strings"
 
-	"github.com/mmbros/www/scraper"
+	"github.com/mmbros/mananno/scraper"
 )
 
 // Channel represents an Arenavision channel.

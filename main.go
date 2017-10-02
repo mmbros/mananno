@@ -23,6 +23,7 @@ import (
 	"github.com/justinas/alice"
 	"github.com/mmbros/mananno/httpcache"
 	"github.com/mmbros/mananno/jsonrpc"
+	"github.com/mmbros/mananno/scraper/acestreamid"
 	"github.com/mmbros/mananno/scraper/arenavision"
 	"github.com/mmbros/mananno/scraper/ilcorsaronero"
 	"github.com/mmbros/mananno/templates"
@@ -33,6 +34,7 @@ var (
 	cfg             *configuration
 	httpcacheClient *httpcache.Client
 	av              *arenavision.Scraper
+	scprAcestreamid *acestreamid.Scraper
 	trans           *transmission.Client
 )
 
@@ -187,7 +189,65 @@ func handlerArenavisionChannel(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Template error: %q\n", err)
 	}
 }
+func handlerAcestreamidChannels(w http.ResponseWriter, r *http.Request) {
+	var err error
+	log.Printf("%s %s", r.Method, r.URL)
+	log.Print(r.URL.Query())
 
+	err = scprAcestreamid.Refresh()
+	log.Printf("Acestreamid channels: %d\n", len(scprAcestreamid.Channels))
+
+	lastUpdate := time.Now()
+
+	data := struct {
+		HeadTitle  string
+		Channels   acestreamid.Channels
+		LastUpdate time.Time
+		Err        error
+	}{
+		"Acestreamid CANALI",
+		scprAcestreamid.Channels,
+		lastUpdate,
+		err,
+	}
+
+	if err = templates.PageAcestreamidChannels.Execute(w, data); err != nil {
+		log.Printf("Template error: %q\n", err)
+	}
+}
+
+func handlerAcestreamidChannel(w http.ResponseWriter, r *http.Request) {
+	var err error
+	log.Printf("%s %s", r.Method, r.URL)
+	log.Print(r.URL.Query())
+
+	ps := FetchParams(r)
+
+	channel := scprAcestreamid.ChannelByID(ps.ByName("name"))
+	log.Printf("CHANNEL %s: %v\n", ps.ByName("name"), channel)
+	if channel == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	lastUpdate := time.Now()
+
+	data := struct {
+		HeadTitle  string
+		Name       string
+		LastUpdate time.Time
+		Err        error
+	}{
+		channel.ID(),
+		channel.Name,
+		lastUpdate,
+		err,
+	}
+
+	if err = templates.PageAcestreamidChannel.Execute(w, data); err != nil {
+		log.Printf("Template error: %q\n", err)
+	}
+}
 func jsonrpcSessionGet(req *jsonrpc.Request) (interface{}, error) {
 	return trans.SessionGet()
 }
@@ -241,6 +301,8 @@ func main() {
 	log.Print(cfg)
 	httpcacheClient = httpcache.NewTTL("/tmp/mananno", 95*time.Minute)
 	av = &arenavision.Scraper{Client: httpcacheClient}
+	scprAcestreamid = &acestreamid.Scraper{Client: httpcacheClient}
+
 	trans = transmission.NewClient(
 		cfg.Transmission.Address(),
 		cfg.Transmission.Username,
@@ -273,9 +335,13 @@ func main() {
 	routerGET("/ilcorsaronero", handlerCorsaroIndex)
 	routerPOST("/ilcorsaronero", handlerCorsaroIndex)
 
+	routerGET("/acestreamid", handlerRedirect("/acestreamid/channels"))
+	routerGET("/acestreamid/channels", handlerAcestreamidChannels)
+	routerGET("/acestreamid/channels/:name", handlerAcestreamidChannel)
+
 	routerGET("/test", handlerTest)
 
-	routerGET("/", handlerRedirect("/ilcorsaronero"))
+	routerGET("/", handlerRedirect("/arenavision"))
 
 	// json-rpc server
 	rpcserver := jsonrpc.NewServer()
