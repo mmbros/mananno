@@ -30,6 +30,27 @@
 
 <hr>
 <p>Last Update: <b>{{ .LastUpdate.Format "02 January 15:04:05" }}</b></p>
+<p>Streams: <b>{{ len .Streams  }}</b></p>
 
+<table class="schedule">
+<thead>
+<tr>
+<th>Title</th>
+<th>ID</th>
+<th>Site</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Streams -}}
+<tr>
+ <td>{{ .Title }}</td>
+ <td><a href="{{ .URL }}">{{ .ID }}</a></td>
+ <td>{{ .Site }}</td>
+ <td>{{ .Time }}</td>
+</tr>
+{{ end }}
+</tbody>
+</table>
 {{template "footer"}}
 {{end}}

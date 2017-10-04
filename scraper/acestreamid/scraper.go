@@ -1,6 +1,7 @@
 package acestreamid
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -18,9 +19,10 @@ type Scraper struct {
 
 // Channel represents an Acestreamid.com channel information.
 type Channel struct {
-	Name  string
-	Href  string
-	Count string
+	Name    string
+	Href    string
+	Count   string
+	Streams Streams
 }
 
 // Channels is a collenction of Acestreamid.com Channel.
@@ -37,20 +39,56 @@ type Stream struct {
 // Streams is an array of Acestreamid.com Stream.
 type Streams []*Stream
 
+func (s *Stream) URL() string {
+	if s == nil || s.ID == "" {
+		return ""
+	}
+	if strings.Contains(s.ID, "://") {
+		return s.ID
+	}
+	return fmt.Sprintf("acestream://%s", s.ID)
+}
+
 // ID returns the identifier of the channel
 func (ch *Channel) ID() string {
 	return strings.TrimPrefix(ch.Href, "/channel/")
 }
+
+func (ch *Channel) Refresh(client scraper.URLGetter) error {
+
+	u := "https://acestreamid.com" + ch.Href
+	resp, err := getURL(client, u)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	// create a goquery document from the response
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return err
+	}
+
+	// get the urls of the channels
+	ch.Streams, _ = parseStreams(doc)
+
+	return nil
+}
+
 func parseStreams(doc *goquery.Document) (Streams, error) {
 	streams := Streams{}
 	doc.Find("li.collection-item").Each(func(i int, s *goquery.Selection) {
-		strm := &Stream{
-			Title: s.Find(".col_title").Text(),
-			ID:    s.Find(".col_id").Text(),
-			Time:  strings.TrimSpace(s.Find(".col_time span").Text()),
-			Site:  s.Find(".col_time a").AttrOr("href", ""),
+		title := s.Find(".col_title").Text()
+		if title != "" {
+			strm := &Stream{
+				Title: title,
+				ID:    s.Find(".col_id").Text(),
+				Time:  strings.TrimSpace(s.Find(".col_time span").Text()),
+				Site:  s.Find(".col_time a").AttrOr("href", ""),
+			}
+			streams = append(streams, strm)
 		}
-		streams = append(streams, strm)
 	})
 	return streams, nil
 }

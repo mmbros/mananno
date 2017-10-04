@@ -229,17 +229,20 @@ func handlerAcestreamidChannel(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	channel.Refresh(scprAcestreamid.Client)
 
 	lastUpdate := time.Now()
 
 	data := struct {
 		HeadTitle  string
 		Name       string
+		Streams    acestreamid.Streams
 		LastUpdate time.Time
 		Err        error
 	}{
 		channel.ID(),
 		channel.Name,
+		channel.Streams,
 		lastUpdate,
 		err,
 	}
