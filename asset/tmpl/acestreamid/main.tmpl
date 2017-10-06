@@ -29,6 +29,7 @@
 <h1>Acestreamid's Channel {{ .Name  }}</h1>
 
 <hr>
+<p><a href="/acestreamid/channels">Elenco dei canali</a></p>
 <p>Last Update: <b>{{ .LastUpdate.Format "02 January 15:04:05" }}</b></p>
 <p>Streams: <b>{{ len .Streams  }}</b></p>
 
@@ -45,7 +46,7 @@
 {{ range .Streams -}}
 <tr>
  <td>{{ .Title }}</td>
- <td><a href="{{ .URL }}">{{ .ID }}</a></td>
+ <td><a href="{{ ToURL .URL }}">{{ .ID }}</a></td>
  <td>{{ .Site }}</td>
  <td>{{ .Time }}</td>
 </tr>

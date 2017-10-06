@@ -11,6 +11,11 @@ var funcMap = template.FuncMap{
 	"ToLower": strings.ToLower,
 	"ToUpper": strings.ToUpper,
 	"sum":     sum,
+	"ToURL":   ToURL,
+}
+
+func ToURL(s string) template.URL {
+	return template.URL(s)
 }
 
 func formatItWeekday(t time.Time) string {

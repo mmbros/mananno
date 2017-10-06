@@ -2,6 +2,7 @@ package acestreamid
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -44,8 +45,10 @@ func (s *Stream) URL() string {
 		return ""
 	}
 	if strings.Contains(s.ID, "://") {
+		log.Printf("URL 1: %s\n", s.ID)
 		return s.ID
 	}
+	fmt.Printf("URL 2: acestream://%s\n", s.ID)
 	return fmt.Sprintf("acestream://%s", s.ID)
 }
 
