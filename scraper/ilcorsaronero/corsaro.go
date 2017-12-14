@@ -1,6 +1,7 @@
 package ilcorsaronero
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -68,17 +69,34 @@ func (c *Client) Search(search string, cat Category) (SearchResults, error) {
 	url := c.buildSearchURL(search, cat)
 	log.Printf("GET %s", url)
 
-	response, err := http.Get(url)
+	// use custom client to fix #1 issue:
+	//   x509: certificate signed by unknown authority
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	response, err := client.Get(url)
 	if err != nil {
+		log.Println("corsaro.Search", "client.Get", err)
 		return nil, err
 	}
+
+	// check http status code
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		// http error
+		log.Println("corsaro.Search", "response status", response.Status)
+		return nil, fmt.Errorf(response.Status)
+	}
+
 	defer response.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(io.Reader(response.Body))
 	if err != nil {
+		log.Println("corsaro.Search", "goquery.NewDocumentFromReader", err)
 		return nil, err
 	}
-	defer response.Body.Close()
+	//defer response.Body.Close()
 
 	var results SearchResults
 

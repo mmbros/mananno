@@ -1,13 +1,15 @@
 package scraper
 
 import (
+	"bufio"
 	"errors"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-/*
 // NewDocumentFromString returns a goquery.Document from a string.
 func NewDocumentFromString(html string) (*goquery.Document, error) {
 	// create a reader
@@ -34,6 +36,7 @@ func NewDocumentFromFile(path string) (*goquery.Document, error) {
 	return doc, nil
 }
 
+/*
 // ExtractText returns the data of the Text nodes
 // of the selection
 func ExtractText(s *goquery.Selection) string {
