@@ -74,11 +74,16 @@ func (c *Client) Search(search string, cat Category) (SearchResults, error) {
 	}
 	defer response.Body.Close()
 
+	// check http status code
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		// http error
+		return nil, fmt.Errorf(response.Status)
+	}
+
 	doc, err := goquery.NewDocumentFromReader(io.Reader(response.Body))
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
 
 	var results SearchResults
 
