@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -46,6 +47,14 @@ func (s *session) Get() string {
 }
 
 func normalizeAddress(addr string) string {
+	log.Printf("normalizeAddress(addr=%q)\n", addr)
+
+	colon := strings.Index(addr, ":")
+	slash := strings.Index(addr, "/")
+	if colon >= 0 && (slash < 0 || colon < slash) {
+		addr = "//" + addr
+	}
+
 	if u, err := url.Parse(addr); err == nil {
 		if u.Scheme == "" {
 			u.Scheme = "http"
@@ -57,7 +66,10 @@ func normalizeAddress(addr string) string {
 		}
 		log.Printf("transmission: updating Address from %q to %q", addr, u.String())
 		addr = u.String()
+	} else {
+		log.Printf("normalizeAddress ERR %v\n", err)
 	}
+	log.Printf("normalizeAddress -> %q\n", addr)
 	return addr
 }
 
@@ -105,6 +117,7 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 		// prepare the request
 		req, err := http.NewRequest(http.MethodPost, c.Address, body)
 		if err != nil {
+			log.Printf("iter %d - aiddress=%s: %v\n", iter, c.Address, err)
 			return err
 		}
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -115,6 +128,7 @@ func (c *Client) exec(method string, args interface{}, reply interface{}) error 
 
 		resp, err := c.client.Do(req)
 		if err != nil {
+			log.Printf("iter %d b: %v\n", iter, err)
 			return err
 		}
 
