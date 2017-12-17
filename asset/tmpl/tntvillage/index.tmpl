@@ -1,0 +1,48 @@
+{{ define "content" }}
+{{ template "search-form" . }}
+{{ template "result-list" . }}
+{{ end }}
+
+{{/*
+
+ERROR: Get http://ilcorsaronero.info/adv/fargo+s02.html: dial tcp 31.131.4.166:80: getsockopt: no route to host
+  */}}
+
+{{ define "search-form" }}
+<div class="search">
+  <form method="POST">
+<!--      <label for="search">Search:</label>
+-->      <input type="text" id="search" name="search" placeholder="Search" class="search__string" value="{{.Search}}"/><!--
+
+--><select class="search__category" name="category">
+        <option value="0">All</option>
+        <option value="29"{{if eq .Category 29}} selected="selected"{{end}}>Serie TV</option>
+        <option value="1"{{if eq .Category 1}} selected="selected"{{end}}>Film</option>
+        <option value="3"{{if eq .Category 3}} selected="selected"{{end}}>Libri</option>
+      </select><!--
+
+      --><input class="search__submit" type="submit" value="Search">
+  </form>
+{{if .Err}}<p>ERROR: {{.Err}}</p>{{end}}
+</div>
+{{ end }}
+
+{{ define "result-list" }}{{if .Items}}
+
+<ol class="result-list">
+    {{range $index, $row := .Items}}
+    <li>
+      <div class="result__name">{{$row.Titolo}}</div>
+      <div  class="result__info">
+        <span class="result__pos">#{{sum $index 1}}</span>
+        <span class="result__cat">{{$row.Cat}}</span>
+        <span class="result__seeds">{{$row.Seeds}}</span>
+        <span class="result__leech">{{$row.Leech}}</span>
+      </div>
+      <div  class="result__actions">
+		  <a class="btn result__add"  href="#" onclick='magnetAdd("{{$row.Magnet}}", false)'>Add Magnet</a></span>
+      </div>
+    </li><!-- .result -->{{end}}
+</ol><!-- .result-list -->
+{{end}}
+{{ end }}

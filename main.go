@@ -26,6 +26,7 @@ import (
 	"github.com/mmbros/mananno/scraper/acestreamid"
 	"github.com/mmbros/mananno/scraper/arenavision"
 	"github.com/mmbros/mananno/scraper/ilcorsaronero"
+	"github.com/mmbros/mananno/scraper/tntvillage"
 	"github.com/mmbros/mananno/templates"
 	"github.com/mmbros/mananno/transmission"
 )
@@ -37,6 +38,37 @@ var (
 	scprAcestreamid *acestreamid.Scraper
 	trans           *transmission.Client
 )
+
+func handlerTntVillageIndex(w http.ResponseWriter, r *http.Request) {
+	var (
+		data struct {
+			Search   string
+			Category tntvillage.Category
+			Items    tntvillage.SearchResults
+			Err      error
+		}
+	)
+
+	// check category param
+	if i, err := strconv.Atoi(r.FormValue("category")); err != nil {
+		data.Category = tntvillage.CatAll
+	} else {
+		data.Category = tntvillage.Category(i)
+	}
+
+	// check search param
+	data.Search = r.FormValue("search")
+
+	if len(data.Search) > 0 {
+		// do search
+		client := tntvillage.Client{}
+		data.Items, data.Err = client.Search(data.Search, data.Category)
+	}
+
+	if err := templates.PageTntVillageIndex.Execute(w, data); err != nil {
+		log.Printf("Template error: %q\n", err)
+	}
+}
 
 func handlerTransmission(w http.ResponseWriter, r *http.Request) {
 	ps := FetchParams(r)
@@ -255,6 +287,24 @@ func jsonrpcSessionGet(req *jsonrpc.Request) (interface{}, error) {
 	return trans.SessionGet()
 }
 
+func jsonrpcMagnetAdd(req *jsonrpc.Request) (interface{}, error) {
+
+	type MagnetAddReqParams struct {
+		Magnet string `json:"magnet"`
+		Paused bool   `json:"paused"`
+	}
+
+	var params MagnetAddReqParams
+
+	err := json.Unmarshal([]byte(*req.Params), &params)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("jsonrpc:magnet-add: magnet:%s, paused:%v", params.Magnet, params.Paused)
+
+	return trans.TorrentAdd(params.Magnet, params.Paused)
+}
+
 func jsonrpcTorrentAdd(req *jsonrpc.Request) (interface{}, error) {
 
 	type TorrentAddReqParams struct {
@@ -335,6 +385,9 @@ func main() {
 	routerGET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
 	routerGET("/arenavision/channels/:name", handlerArenavisionChannel)
 
+	routerGET("/tntvillage", handlerTntVillageIndex)
+	routerPOST("/tntvillage", handlerTntVillageIndex)
+
 	routerGET("/ilcorsaronero", handlerCorsaroIndex)
 	routerPOST("/ilcorsaronero", handlerCorsaroIndex)
 
@@ -350,6 +403,7 @@ func main() {
 	rpcserver := jsonrpc.NewServer()
 	rpcserver.MethodMap["session-get"] = jsonrpcSessionGet
 	rpcserver.MethodMap["torrent-add"] = jsonrpcTorrentAdd
+	rpcserver.MethodMap["magnet-add"] = jsonrpcMagnetAdd
 	//routerPOST("/jsonrpc", func(w http.ResponseWriter, r *http.Request) { rpcserver.Handler(w, r) })
 	routerPOST("/jsonrpc", rpcserver.Handler)
 
