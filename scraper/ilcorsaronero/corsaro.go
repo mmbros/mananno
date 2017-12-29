@@ -1,6 +1,7 @@
 package ilcorsaronero
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -68,7 +69,14 @@ func (c *Client) Search(search string, cat Category) (SearchResults, error) {
 	url := c.buildSearchURL(search, cat)
 	log.Printf("GET %s", url)
 
-	response, err := http.Get(url)
+	// use custom client to fix #1 issue:
+	//   x509: certificate signed by unknown authority
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	response, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
