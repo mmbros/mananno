@@ -31,8 +31,8 @@
 	<div class="start-date">{{ weekday .StartTime }} {{ .StartTime.Format "02" }}</div>
 	<div class="start-time">{{ .StartTime.Format "15:04" }}</div>
 </td>
-<td><a href="?sport={{urlquery .Sport | ToLower}}">{{ .Sport }}<a/></td>
-<td><a href="?competition={{urlquery .Competition | ToLower}}">{{ .Competition }}<a/></td>
+<td><a href="?sport={{ .Sport | ToLower | urlquery }}">{{ .Sport }}<a/></td>
+<td><a href="?competition={{ .Competition | ToLower | urlquery }}">{{ .Competition }}<a/></td>
 <td>{{ .Event }}</td>
 <td>
 	{{ range .Lives -}}
