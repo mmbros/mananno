@@ -39,6 +39,12 @@ var (
 	trans           *transmission.Client
 )
 
+func handlerHomepage(w http.ResponseWriter, r *http.Request) {
+	if err := templates.PageHomepage.Execute(w, nil); err != nil {
+		log.Printf("Template error: %q\n", err)
+	}
+}
+
 func handlerTntVillageIndex(w http.ResponseWriter, r *http.Request) {
 	var (
 		data struct {
@@ -380,6 +386,8 @@ func main() {
 	}
 
 	// routes
+	routerGET("/", handlerHomepage)
+
 	routerGET("/arenavision", handlerRedirect("/arenavision/schedule"))
 	routerGET("/arenavision/schedule", handlerArenavisionSchedule)
 	routerGET("/arenavision/schedule/refresh", handlerArenavisionScheduleRefresh)
@@ -397,8 +405,6 @@ func main() {
 
 	routerGET("/test", handlerTest)
 
-	routerGET("/", handlerRedirect("/arenavision"))
-
 	// json-rpc server
 	rpcserver := jsonrpc.NewServer()
 	rpcserver.MethodMap["session-get"] = jsonrpcSessionGet
@@ -409,6 +415,7 @@ func main() {
 
 	// static files
 	routerGET("/css/*filepath", fileServer.ServeHTTP)
+	routerGET("/img/*filepath", fileServer.ServeHTTP)
 	routerGET("/js/*filepath", fileServer.ServeHTTP)
 
 	// transmission reverse proxy
