@@ -41,11 +41,12 @@ func (ch *Channel) GetLink(client scraper.URLGetter) (string, error) {
 
 // ID returns the identifier of an Arenavision channel.
 func (ch *Channel) ID() string {
-	u := ch.URL
-	if (len(u) == 0) || (u[0] != '/') {
+	u := ch.Name
+	j := strings.LastIndex(u, " ")
+	if j < 0 {
 		return u
 	}
-	return u[1:]
+	return u[j+1:]
 }
 
 func (ch *Channel) String() string {

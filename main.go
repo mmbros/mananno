@@ -156,6 +156,7 @@ func handlerTest(w http.ResponseWriter, r *http.Request) {
 
 func handlerRedirect(location string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[%s] %q -> %q\n", "REDIRECT", r.URL, location)
 		http.Redirect(w, r, location, http.StatusMovedPermanently)
 	}
 }
@@ -166,6 +167,7 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.URL.Query())
 
 	err = av.RefreshGuide()
+	av.Channels.Print()
 
 	lastUpdate := time.Now()
 	events := av.Events
