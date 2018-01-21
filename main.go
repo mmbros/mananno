@@ -167,7 +167,6 @@ func handlerArenavisionSchedule(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.URL.Query())
 
 	err = av.RefreshGuide()
-	av.Channels.Print()
 
 	lastUpdate := time.Now()
 	events := av.Events
